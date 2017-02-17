@@ -101,14 +101,7 @@ static PyGetSetDef kr_private_getseters[] = {
 	{NULL}
 };
 
-static char *private_get_key(kr_private* self){
 
-	printf("private_get_key called + %s\n", self->debug_1);
-#if 0
-	return PyUnicode_FromFormat("%S ", self->sec_key);
-#endif
-	return 0;
-}
 
 static PyObject *kr_private_set_opt(kr_private* self, PyObject* args){
 
@@ -128,24 +121,74 @@ static PyObject *kr_private_set_opt(kr_private* self, PyObject* args){
 		return -1;
 	}
 #endif
-	return PyUnicode_FromString(self->debug_1);
+
+	kraken_set_opt(&(self->kr_api), py_option, py_value);
+	/* there are no void functions in Python, 
+	* macro "Py_RETURN_NONE" necessary */
+	Py_RETURN_NONE ;	
 }
 
-/* there are no void functions in Python, 
- * macro "Py_RETURN_NONE" necessary */
 
-static void test_method(kr_private *self){
 
-	printf("test_method called\n");
-	printf("kr_private->debug_1 : %s\n", self->debug_1);
-	
+
+
+static PyObject *kr_private_add_order(kr_private *self, PyObject *args){
+
+	char* type	= NULL;
+	char* ordertype = NULL; 
+	char* asset	= NULL;
+	char* volume	= NULL;
+	char* arg_1	= NULL;
+	char* arg_2	= NULL;
+
+	if (!PyArg_ParseTuple(args, "ssss|ss", &type, &ordertype, &asset, &volume, &arg_1, &arg_2))
+		return NULL;
+
+	printf("calling add_order from python\n");
+
+	self->kr_api->priv_func->add_order(&(self->kr_api), "buy", "stop-loss-profit", "XXBTZEUR", "0.43", "0.2", "0.1");
+	printf("add_order called\n");
 	Py_RETURN_NONE ;
 }
 
+static PyObject *kr_private_cancel_order(kr_private *self, PyObject *args){
+
+	char* order_id = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &order_id))
+		return NULL;
+
+	self->kr_api->priv_func->cancel_order(&(self->kr_api), order_id);
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *kr_private_account_balance(kr_private *self){
+
+	self->kr_api->priv_func->get_account_balance(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_trade_balance(kr_private *self){
+
+	self->kr_api->priv_func->get_trade_balance(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_result(kr_private *self){
+
+	return PyUnicode_FromString(self->kr_api->s_result);
+}
+
 static PyMethodDef kr_private_methods[] = {
-	{"name", (PyCFunction)private_get_key, METH_NOARGS, "Return the first and last name"},
 	{"set_opt", (PyCFunction)kr_private_set_opt, METH_VARARGS, "Set optionals for the API calls"},
-	{"test", (PyCFunction)test_method, METH_NOARGS, "debug method 1"},
+	{"add_order", (PyCFunction)kr_private_add_order, METH_VARARGS, "Execute an order"},
+	{"cancel_order", (PyCFunction)kr_private_cancel_order, METH_VARARGS, "Cancel an order (by order-ID)"},
+	{"account_balance", (PyCFunction)kr_private_account_balance, METH_NOARGS, "Query the account balance"},
+	{"trade_balance", (PyCFunction)kr_private_trade_balance, METH_NOARGS, "Query the trade balance"},
+	{"result", (PyCFunction)kr_private_result, METH_VARARGS, "Return the result of an API call"},
 	{NULL}	/* Sentinel */
 };
 
