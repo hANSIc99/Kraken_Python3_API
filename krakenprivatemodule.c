@@ -8,8 +8,8 @@ typedef struct {
 	PyObject_HEAD
 	/* Type-specific fields go here. */
 
-	char* sec_key;
-	char* api_key;
+	char* debug_1;
+
 
 	int number;
 
@@ -31,11 +31,12 @@ static void kr_private_dealloc(kr_private* self){
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 static PyObject *kr_private_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
-
+	/* use this function to initialize variabled */
 	printf("Kraken new executed\n");
 	kr_private *self;
 	self = (kr_private *)type->tp_alloc(type, 0);
 
+	self->debug_1 = "Debug_1";
 	return (PyObject *)self;
 }
 
@@ -56,11 +57,6 @@ static int private_set_api_char(kr_private *self){
 	printf("address: %lu\n", (unsigned long)self);
 
 
-	printf("value of my_result: %s\n", self->api_key);
-#if 0
-		self->number = 0;
-#endif
-
 	return 0;
 
 }
@@ -79,6 +75,7 @@ static int kr_private_init(kr_private *self, PyObject *args, PyObject *kwds){
 
 	printf("api-key: %s\n", api_key);
 	printf("sec-key: %s\n", sec_key);
+
 
 	private_set_api_char(self);
 
@@ -106,24 +103,49 @@ static PyGetSetDef kr_private_getseters[] = {
 
 static char *private_get_key(kr_private* self){
 
-	printf("private_get_key called\n");
+	printf("private_get_key called + %s\n", self->debug_1);
 #if 0
 	return PyUnicode_FromFormat("%S ", self->sec_key);
 #endif
-	return "sdfsdfsdfsdsdf";
+	return 0;
 }
 
-static PyObject *kr_private_set_opt(kr_private* self){
-    return PyUnicode_FromFormat("%S", "hey");
+static PyObject *kr_private_set_opt(kr_private* self, PyObject* args){
+
+
+	char *py_option = NULL, *py_value = NULL;
+
+	if (!PyArg_ParseTuple(args, "ss", &py_option, &py_value))
+		return NULL;
 
 #if 0
-    printf("kr_private_set_opt called\n");
+	if(!(PyUnicode_Check(py_option))){
+		PyErr_SetString(PyExc_TypeError, "\"Option\" must be a string object");
+		return -1;
+	}
+	if(!(PyUnicode_Check(py_value))){
+		PyErr_SetString(PyExc_TypeError, "\"Value\" must be a string object");
+		return -1;
+	}
 #endif
+	return PyUnicode_FromString(self->debug_1);
+}
+
+/* there are no void functions in Python, 
+ * macro "Py_RETURN_NONE" necessary */
+
+static void test_method(kr_private *self){
+
+	printf("test_method called\n");
+	printf("kr_private->debug_1 : %s\n", self->debug_1);
+	
+	Py_RETURN_NONE ;
 }
 
 static PyMethodDef kr_private_methods[] = {
 	{"name", (PyCFunction)private_get_key, METH_NOARGS, "Return the first and last name"},
-	{"set_opt", (PyCFunction)kr_private_set_opt, METH_NOARGS, "Set optionals for the API calls"},
+	{"set_opt", (PyCFunction)kr_private_set_opt, METH_VARARGS, "Set optionals for the API calls"},
+	{"test", (PyCFunction)test_method, METH_NOARGS, "debug method 1"},
 	{NULL}	/* Sentinel */
 };
 
