@@ -8,26 +8,25 @@ typedef struct {
 	PyObject_HEAD
 	/* Type-specific fields go here. */
 
-	char* debug_1;
-
-
-	int number;
-
 	struct kraken_api *kr_api;
+
 } kr_private;
 
+static int kr_private_traverse(kr_private *self, visitproc visit, void *arg){
 
-static int kr_private_clear(kr_private *self){
+	Py_VISIT(self->kr_api);
 
-	printf("clear calles\n");
+	return 0;
 }
+
 /* 
 module = PyImport_ImportModule("testPython");
 */
+
 static void kr_private_dealloc(kr_private* self){
 
 	printf("dealloc called\n");
-	kr_private_clear(self);
+	kraken_clean(&(self->kr_api));
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 static PyObject *kr_private_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
@@ -36,29 +35,7 @@ static PyObject *kr_private_new(PyTypeObject *type, PyObject *args, PyObject *kw
 	kr_private *self;
 	self = (kr_private *)type->tp_alloc(type, 0);
 
-	self->debug_1 = "Debug_1";
 	return (PyObject *)self;
-}
-
-static void public_dealloc(kr_private* self){
-
-	printf("dealloc called\n");
-	kr_private_clear(self);
-	Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-
-/* fehler bei self pointer irgendwo */
-static int private_set_api_char(kr_private *self){
-
-
-	printf("in private_set_api_angekommen\n");
-
-	printf("address: %lu\n", (unsigned long)self);
-
-
-	return 0;
-
 }
 
 
@@ -75,9 +52,6 @@ static int kr_private_init(kr_private *self, PyObject *args, PyObject *kwds){
 
 	printf("api-key: %s\n", api_key);
 	printf("sec-key: %s\n", sec_key);
-
-
-	private_set_api_char(self);
 
 	printf("calling kraken_init\n");
 	
@@ -177,6 +151,89 @@ static PyObject *kr_private_trade_balance(kr_private *self){
 	Py_RETURN_NONE ;
 }
 
+static PyObject *kr_private_open_orders(kr_private *self){
+
+	self->kr_api->priv_func->get_open_orders(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_closed_orders(kr_private *self){
+
+	self->kr_api->priv_func->get_closed_orders(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_query_order_info(kr_private *self, PyObject *args){
+
+	char* order_id = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &order_id))
+		return NULL;
+
+	self->kr_api->priv_func->query_order_info(&(self->kr_api), order_id);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_get_trade_history(kr_private *self){
+
+	self->kr_api->priv_func->get_trades_history(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_query_trades_info(kr_private *self, PyObject *args){
+
+	char* order_id = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &order_id))
+		return NULL;
+
+	self->kr_api->priv_func->query_trades_info(&(self->kr_api), order_id);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_get_open_positions(kr_private *self, PyObject *args){
+
+	char* order_id = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &order_id))
+		return NULL;
+
+	self->kr_api->priv_func->get_open_positions(&(self->kr_api), order_id);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_get_ledgers_info(kr_private *self){
+
+	self->kr_api->priv_func->get_ledgers_info(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_query_ledgers(kr_private *self, PyObject *args){
+
+	char* order_id = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &order_id))
+		return NULL;
+
+	self->kr_api->priv_func->query_ledgers(&(self->kr_api), order_id);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_private_get_trade_volume(kr_private *self){
+
+	self->kr_api->priv_func->get_trade_volume(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
 static PyObject *kr_private_result(kr_private *self){
 
 	return PyUnicode_FromString(self->kr_api->s_result);
@@ -189,6 +246,15 @@ static PyMethodDef kr_private_methods[] = {
 	{"account_balance", (PyCFunction)kr_private_account_balance, METH_NOARGS, "Query the account balance"},
 	{"trade_balance", (PyCFunction)kr_private_trade_balance, METH_NOARGS, "Query the trade balance"},
 	{"result", (PyCFunction)kr_private_result, METH_VARARGS, "Return the result of an API call"},
+	{"open_orders", (PyCFunction)kr_private_open_orders, METH_VARARGS, "Get a list of open orders"},
+	{"closed_orders", (PyCFunction)kr_private_closed_orders, METH_VARARGS, "Get a list of closed orders"},
+	{"query_order_info", (PyCFunction)kr_private_query_order_info, METH_VARARGS, "Query order information"},
+	{"get_trades_history", (PyCFunction)kr_private_get_trade_history, METH_VARARGS, "Get the trades history"},
+	{"query_trades_info", (PyCFunction)kr_private_query_trades_info, METH_VARARGS, "Query trades information"},
+	{"get_open_positions", (PyCFunction)kr_private_get_open_positions, METH_VARARGS, "Get a list of open positions"},
+	{"get_ledgers_info", (PyCFunction)kr_private_get_ledgers_info, METH_VARARGS, "Get ledger information"},
+	{"query_ledgers", (PyCFunction)kr_private_query_ledgers, METH_VARARGS, "Query ledger information"},
+	{"get_trade_volume", (PyCFunction)kr_private_get_trade_volume, METH_VARARGS, "Get the trades volume"},
 	{NULL}	/* Sentinel */
 };
 
@@ -217,7 +283,7 @@ static PyTypeObject kr_private_Type = {
 	0,                         /* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /* tp_flags */
 	"private objects",           /* tp_doc */
-	0,
+	(traverseproc)kr_private_traverse,
 	0,
 	0,
 	0,
@@ -262,9 +328,3 @@ PyMODINIT_FUNC PyInit_kr_private(void){
 
 	return m;
 }
-
-
-
-
-
-
