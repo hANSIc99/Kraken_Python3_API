@@ -1,153 +1,132 @@
-/*
- * =====================================================================================
- *
- *       Filename:  krakenpublicmodule.c
- *
- *    Description:  Public Api functions
- *
- *        Version:  1.0
- *        Created:  06.02.2017 17:37:34
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (), 
- *   Organization:  
- *
- * =====================================================================================
- */
 #include <Python.h>
 #include <structmember.h>
 #include <stdio.h>
 #include "kraken_api.h"
+
 typedef struct {
 	/* makro that brings in the standard python object fields */	
 	PyObject_HEAD
 	/* Type-specific fields go here. */
-	char* sec_key;
-	char* api_key;
-
-	PyObject *first;
-	PyObject *last;
-
-	int number;
 
 	struct kraken_api *kr_api;
-} public;
 
-static int public_traverse(public *self, visitproc visit, void *arg){
+} kr_public;
 
-	Py_VISIT(self->first);
-	Py_VISIT(self->last);
+static int kr_public_traverse(kr_private *self, visitproc visit, void *arg){
 
-	return 0;
-}
-
-static int public_clear(public *self){
-
-	Py_CLEAR(self->first);
-	Py_CLEAR(self->last);
+	Py_VISIT(self->kr_api);
 
 	return 0;
 }
 
-static void public_dealloc(public* self){
+/* 
+module = PyImport_ImportModule("testPython");
+*/
+
+static void kr_public_dealloc(kr_private* self){
 
 	printf("dealloc called\n");
-	public_clear(self);
+	kraken_clean(&(self->kr_api));
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
+static PyObject *kr_public_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
+	/* use this function to initialize variabled */
+	printf("Kraken new executed\n");
+	kr_public *self;
+	self = (kr_public *)type->tp_alloc(type, 0);
 
-static PyObject *public_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
-
-	printf("public new executed\n");
-
-	public *self;
-
-	self = (public *)type->tp_alloc(type, 0);
-
-	if(self != NULL){
-		self->first = PyUnicode_FromString("");
-		if(self->first == NULL){
-			Py_DECREF(self);
-			return NULL;
-		}
-
-		self->last = PyUnicode_FromString("");
-		if(self->last == NULL){
-			Py_DECREF(self);
-			return NULL;				
-		}
-
-		self->number = 0;
-
-	}
-
-	return (PyObject*)self;
-
+	return (PyObject *)self;
 }
 
-/* pass api- and secret-key durin initialization */
 
-static int public_init(public *self, PyObject *args, PyObject *kwds){
+/* pass api- and secret-key durin initialization */
+static int kr_public_init(kr_private *self, PyObject *args, PyObject *kwds){
 
 	printf("public init executed\n");
 
-	PyObject *first = NULL, *last = NULL, *tmp;
+	const char *api_key = "";
+        const char *sec_key = "";
 
-	static char *kwlist[] = {"first", "last", "number", NULL};
+	if(!PyArg_ParseTuple(args, "ss", &api_key, &sec_key))
+		       return -1;
 
-	if(!PyArg_ParseTupleAndKeywords(args, kwds, "|ss", kwlist, &first, &last))
-		return -1;
+	printf("api-key: %s\n", api_key);
+	printf("sec-key: %s\n", sec_key);
 
-	if(first){
-		tmp = self->first;
-		Py_INCREF(first);
-		self->first = first;
-		Py_DECREF(tmp);
-	}
+	printf("calling kraken_init\n");
+	
+	kraken_init(&(self->kr_api), api_key, sec_key);
 
-	if(last){
-		tmp = self->last;
-		Py_INCREF(last);
-		self->last = last;
-		Py_DECREF(tmp);
-	}
+	printf("key in kraken struct: %s\n", self->kr_api->s_api_key);
 
-
-
+	printf("kraken_init called\n");
 	return 0;
 }
 
 
-static PyMemberDef public_members[] = {
-	{"number", T_INT, offsetof(public, number), 0, "Kraken number"},
+
+static PyMemberDef kr_public_members[] = {
 	{NULL} /* Sentinel */
 };
 
 
-static PyGetSetDef public_getseters[] = {
+static PyGetSetDef kr_public_getseters[] = {
 
 	{NULL}
 };
 
-static PyTypeObject *public_name(public* self){
 
-	printf("public_name called\n");
 
-	return PyUnicode_FromFormat("%S %S", self->first, self->last);
+static PyObject *kr_public_set_opt(kr_private* self, PyObject* args){
+
+
+	char *py_option = NULL, *py_value = NULL;
+
+	if (!PyArg_ParseTuple(args, "ss", &py_option, &py_value))
+		return NULL;
+
+#if 0
+	if(!(PyUnicode_Check(py_option))){
+		PyErr_SetString(PyExc_TypeError, "\"Option\" must be a string object");
+		return -1;
+	}
+	if(!(PyUnicode_Check(py_value))){
+		PyErr_SetString(PyExc_TypeError, "\"Value\" must be a string object");
+		return -1;
+	}
+#endif
+
+	kraken_set_opt(&(self->kr_api), py_option, py_value);
+	/* there are no void functions in Python, 
+	* macro "Py_RETURN_NONE" necessary */
+	Py_RETURN_NONE ;	
 }
 
-static PyMethodDef public_methods[] = {
-	{"name", (PyCFunction)public_name, METH_NOARGS, "Return the first and last name"},
+
+
+
+
+
+static PyObject *kr_public_result(kr_private *self){
+
+	return PyUnicode_FromString(self->kr_api->s_result);
+}
+
+static PyMethodDef kr_public_methods[] = {
+	{"set_opt", (PyCFunction)kr_public_set_opt, METH_VARARGS, "Set optionals for the API calls"},
+	{"result", (PyCFunction)kr_public_result, METH_VARARGS, "Return the result of an API call"},
 	{NULL}	/* Sentinel */
 };
 
-static PyTypeObject krakenpublic_Type = {
+
+
+static PyTypeObject kr_public_Type = {
+
 	PyVarObject_HEAD_INIT(NULL, 0)
-		"kraken.public",             /* tp_name */
-	sizeof(public), /* tp_basicsize */
+	"kr_public.Kr_private",   /* tp_name */
+	sizeof(kr_public),	   /* tp_basicsize */
 	0,                         /* tp_itemsize */
-	(destructor)public_dealloc,   /* tp_dealloc */
+	(destructor)kr_public_dealloc,   /* tp_dealloc */
 	0,                         /* tp_print */
 	0,                         /* tp_getattr */
 	0,                         /* tp_setattr */
@@ -162,48 +141,50 @@ static PyTypeObject krakenpublic_Type = {
 	0,                         /* tp_getattro */
 	0,                         /* tp_setattro */
 	0,                         /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,        /* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /* tp_flags */
 	"public objects",           /* tp_doc */
+	(traverseproc)kr_public_traverse,
 	0,
 	0,
 	0,
 	0,
 	0,
-	0,
-	public_methods,
-	public_members,
-	public_getseters,
-	0,
+	kr_public_methods,
+	kr_public_members,
+	kr_public_getseters,
 	0,
 	0,
 	0,
 	0,
-	(initproc)public_init,
 	0,
-	public_new,
+	(initproc)kr_public_init,
+	0,
+	kr_public_new,
 };
 
-static PyModuleDef krakenpublicmodule = {
+static PyModuleDef kr_publicmodule = {
 	PyModuleDef_HEAD_INIT,
-	"kraken",
+	"kr_public",
 	"Module that inherits public API functions.",
 	-1,
 	NULL, NULL, NULL, NULL, NULL
 };
 
-PyMODINIT_FUNC PyInit_public(void){
+PyMODINIT_FUNC PyInit_kr_public(void){
+
+	printf("PyInit_kr_public called\n");
 
 	PyObject* m;
 
-	if (PyType_Ready(&krakenpublic_Type) < 0)
+	if (PyType_Ready(&kr_public_Type) < 0)
 		return NULL;
 
-	m = PyModule_Create(&krakenpublicmodule);
+	m = PyModule_Create(&kr_publicmodule);
 	if (m == NULL)
 		return NULL;
 
-	Py_INCREF(&krakenpublic_Type);
-	PyModule_AddObject(m, "public", (PyObject *)&krakenpublic_Type);
+	Py_INCREF(&kr_public_Type);
+	PyModule_AddObject(m, "kr_public", (PyObject *)&kr_public_Type);
+
 	return m;
 }
-

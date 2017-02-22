@@ -234,9 +234,55 @@ static PyObject *kr_private_get_trade_volume(kr_private *self){
 	Py_RETURN_NONE ;
 }
 
+static PyObject *kr_public_server_time(kr_private *self){
+
+	self->kr_api->pub_func->get_server_time(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
 static PyObject *kr_private_result(kr_private *self){
 
 	return PyUnicode_FromString(self->kr_api->s_result);
+}
+
+static PyObject *kr_public_asset_info(kr_private *self){
+
+	self->kr_api->pub_func->get_asset_info(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_public_get_tradeable_asset_pairs(kr_private *self){
+
+	/* spelling mistake */
+	self->kr_api->pub_func->get_tradable_asset_pairs(&(self->kr_api));
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_public_get_ticker_info(kr_private *self, PyObject *args){
+
+	char* asset_pairs = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &asset_pairs))
+		return NULL;
+
+	self->kr_api->pub_func->get_ticker_info(&(self->kr_api), asset_pairs);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_public_get_ohlc_data(kr_private *self, PyObject *args){
+
+	char* asset_pairs = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &asset_pairs))
+		return NULL;
+
+	self->kr_api->pub_func->get_ohlc_data(&(self->kr_api), asset_pairs);
+
+	Py_RETURN_NONE ;
 }
 
 static PyMethodDef kr_private_methods[] = {
@@ -255,6 +301,11 @@ static PyMethodDef kr_private_methods[] = {
 	{"get_ledgers_info", (PyCFunction)kr_private_get_ledgers_info, METH_VARARGS, "Get ledger information"},
 	{"query_ledgers", (PyCFunction)kr_private_query_ledgers, METH_VARARGS, "Query ledger information"},
 	{"get_trade_volume", (PyCFunction)kr_private_get_trade_volume, METH_VARARGS, "Get the trades volume"},
+	{"get_server_time", (PyCFunction)kr_public_server_time, METH_VARARGS, "Get the current server time"},
+	{"get_asset_info", (PyCFunction)kr_public_asset_info, METH_VARARGS, "Get the current server time"},
+	{"get_tradeable_asset_pairs", (PyCFunction)kr_public_get_tradeable_asset_pairs, METH_VARARGS, "Get tradeable asset pairs"},
+	{"get_ticker_info", (PyCFunction)kr_public_get_ticker_info, METH_VARARGS, "Get ticker information"},
+	{"get_ohlc_data", (PyCFunction)kr_public_get_ohlc_data, METH_VARARGS, "Get OHLC data"},
 	{NULL}	/* Sentinel */
 };
 
