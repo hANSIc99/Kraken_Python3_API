@@ -10,9 +10,9 @@ typedef struct {
 
 	struct kraken_api *kr_api;
 
-} kr_private;
+} kr_module;
 
-static int kr_private_traverse(kr_private *self, visitproc visit, void *arg){
+static int kr_module_traverse(kr_module *self, visitproc visit, void *arg){
 
 	Py_VISIT(self->kr_api);
 
@@ -23,32 +23,38 @@ static int kr_private_traverse(kr_private *self, visitproc visit, void *arg){
 module = PyImport_ImportModule("testPython");
 */
 
-static void kr_private_dealloc(kr_private* self){
+static void kr_module_dealloc(kr_module* self){
 
 	printf("dealloc called\n");
-	kraken_clean(&(self->kr_api));
+	if(self->kr_api)
+		kraken_clean(&(self->kr_api));
+
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
-static PyObject *kr_private_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
+static PyObject *kr_module_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
 	/* use this function to initialize variabled */
 	printf("Kraken new executed\n");
-	kr_private *self;
-	self = (kr_private *)type->tp_alloc(type, 0);
+	kr_module *self;
+	self = (kr_module *)type->tp_alloc(type, 0);
 
 	return (PyObject *)self;
 }
 
 
 /* pass api- and secret-key durin initialization */
-static int kr_private_init(kr_private *self, PyObject *args, PyObject *kwds){
+static int kr_module_init(kr_module *self, PyObject *args, PyObject *kwds){
 
 	printf("private init executed\n");
 
 	const char *api_key = NULL;
         const char *sec_key = NULL;
+	self->kr_api = NULL;
 
-	if(!PyArg_ParseTuple(args, "ss", &api_key, &sec_key))
-		       return -1;
+	if(!PyArg_ParseTuple(args, "ss", &api_key, &sec_key)){
+
+		PyErr_SetString(PyExc_TypeError, "The function takes the API key and security key as arguments");
+		return -1;
+	}
 
 	printf("api-key: %s\n", api_key);
 	printf("sec-key: %s\n", sec_key);
@@ -60,41 +66,30 @@ static int kr_private_init(kr_private *self, PyObject *args, PyObject *kwds){
 	printf("key in kraken struct: %s\n", self->kr_api->s_api_key);
 
 	printf("kraken_init called\n");
+	
 	return 0;
 }
 
 
 
-static PyMemberDef kr_private_members[] = {
+static PyMemberDef kr_module_members[] = {
 	{NULL} /* Sentinel */
 };
 
 
-static PyGetSetDef kr_private_getseters[] = {
+static PyGetSetDef kr_module_getseters[] = {
 
 	{NULL}
 };
 
 
 
-static PyObject *kr_private_set_opt(kr_private* self, PyObject* args){
-
+static PyObject *kr_module_set_opt(kr_module* self, PyObject* args){
 
 	char *py_option = NULL, *py_value = NULL;
 
 	if (!PyArg_ParseTuple(args, "ss", &py_option, &py_value))
 		return NULL;
-
-#if 0
-	if(!(PyUnicode_Check(py_option))){
-		PyErr_SetString(PyExc_TypeError, "\"Option\" must be a string object");
-		return -1;
-	}
-	if(!(PyUnicode_Check(py_value))){
-		PyErr_SetString(PyExc_TypeError, "\"Value\" must be a string object");
-		return -1;
-	}
-#endif
 
 	kraken_set_opt(&(self->kr_api), py_option, py_value);
 	/* there are no void functions in Python, 
@@ -106,7 +101,7 @@ static PyObject *kr_private_set_opt(kr_private* self, PyObject* args){
 
 
 
-static PyObject *kr_private_add_order(kr_private *self, PyObject *args){
+static PyObject *kr_private_add_order(kr_module *self, PyObject *args){
 
 	char* type	= NULL;
 	char* ordertype = NULL; 
@@ -117,7 +112,7 @@ static PyObject *kr_private_add_order(kr_private *self, PyObject *args){
 
 	if (!PyArg_ParseTuple(args, "ssss|ss", &type, &ordertype, &asset, &volume, &arg_1, &arg_2))
 		return NULL;
-
+	
 	printf("calling add_order from python\n");
 
 	self->kr_api->priv_func->add_order(&(self->kr_api), "buy", "stop-loss-profit", "XXBTZEUR", "0.43", "0.2", "0.1");
@@ -125,7 +120,7 @@ static PyObject *kr_private_add_order(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_cancel_order(kr_private *self, PyObject *args){
+static PyObject *kr_private_cancel_order(kr_module *self, PyObject *args){
 
 	char* order_id = NULL;
 
@@ -137,35 +132,35 @@ static PyObject *kr_private_cancel_order(kr_private *self, PyObject *args){
 	Py_RETURN_NONE;
 }
 
-static PyObject *kr_private_account_balance(kr_private *self){
+static PyObject *kr_private_account_balance(kr_module *self){
 
 	self->kr_api->priv_func->get_account_balance(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_trade_balance(kr_private *self){
+static PyObject *kr_private_trade_balance(kr_module *self){
 
 	self->kr_api->priv_func->get_trade_balance(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_open_orders(kr_private *self){
+static PyObject *kr_private_open_orders(kr_module *self){
 
 	self->kr_api->priv_func->get_open_orders(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_closed_orders(kr_private *self){
+static PyObject *kr_private_closed_orders(kr_module *self){
 
 	self->kr_api->priv_func->get_closed_orders(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_query_order_info(kr_private *self, PyObject *args){
+static PyObject *kr_private_query_order_info(kr_module *self, PyObject *args){
 
 	char* order_id = NULL;
 
@@ -177,14 +172,14 @@ static PyObject *kr_private_query_order_info(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_get_trade_history(kr_private *self){
+static PyObject *kr_private_get_trade_history(kr_module *self){
 
 	self->kr_api->priv_func->get_trades_history(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_query_trades_info(kr_private *self, PyObject *args){
+static PyObject *kr_private_query_trades_info(kr_module *self, PyObject *args){
 
 	char* order_id = NULL;
 
@@ -196,7 +191,7 @@ static PyObject *kr_private_query_trades_info(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_get_open_positions(kr_private *self, PyObject *args){
+static PyObject *kr_private_get_open_positions(kr_module *self, PyObject *args){
 
 	char* order_id = NULL;
 
@@ -208,14 +203,14 @@ static PyObject *kr_private_get_open_positions(kr_private *self, PyObject *args)
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_get_ledgers_info(kr_private *self){
+static PyObject *kr_private_get_ledgers_info(kr_module *self){
 
 	self->kr_api->priv_func->get_ledgers_info(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_query_ledgers(kr_private *self, PyObject *args){
+static PyObject *kr_private_query_ledgers(kr_module *self, PyObject *args){
 
 	char* order_id = NULL;
 
@@ -227,33 +222,33 @@ static PyObject *kr_private_query_ledgers(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_get_trade_volume(kr_private *self){
+static PyObject *kr_private_get_trade_volume(kr_module *self){
 
 	self->kr_api->priv_func->get_trade_volume(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_public_server_time(kr_private *self){
+static PyObject *kr_public_server_time(kr_module *self){
 
 	self->kr_api->pub_func->get_server_time(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_private_result(kr_private *self){
+static PyObject *kr_module_result(kr_module *self){
 
 	return PyUnicode_FromString(self->kr_api->s_result);
 }
 
-static PyObject *kr_public_asset_info(kr_private *self){
+static PyObject *kr_public_asset_info(kr_module *self){
 
 	self->kr_api->pub_func->get_asset_info(&(self->kr_api));
 
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_public_get_tradeable_asset_pairs(kr_private *self){
+static PyObject *kr_public_get_tradeable_asset_pairs(kr_module *self){
 
 	/* spelling mistake */
 	self->kr_api->pub_func->get_tradable_asset_pairs(&(self->kr_api));
@@ -261,7 +256,7 @@ static PyObject *kr_public_get_tradeable_asset_pairs(kr_private *self){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_public_get_ticker_info(kr_private *self, PyObject *args){
+static PyObject *kr_public_get_ticker_info(kr_module *self, PyObject *args){
 
 	char* asset_pairs = NULL;
 
@@ -273,7 +268,7 @@ static PyObject *kr_public_get_ticker_info(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyObject *kr_public_get_ohlc_data(kr_private *self, PyObject *args){
+static PyObject *kr_public_get_ohlc_data(kr_module *self, PyObject *args){
 
 	char* asset_pairs = NULL;
 
@@ -285,13 +280,49 @@ static PyObject *kr_public_get_ohlc_data(kr_private *self, PyObject *args){
 	Py_RETURN_NONE ;
 }
 
-static PyMethodDef kr_private_methods[] = {
-	{"set_opt", (PyCFunction)kr_private_set_opt, METH_VARARGS, "Set optionals for the API calls"},
+static PyObject *kr_public_get_order_book(kr_module *self, PyObject *args){
+
+	char* asset_pairs = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &asset_pairs))
+		return NULL;
+
+	self->kr_api->pub_func->get_order_book(&(self->kr_api), asset_pairs);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_public_get_recent_trades(kr_module *self, PyObject *args){
+
+	char* asset_pairs = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &asset_pairs))
+		return NULL;
+
+	self->kr_api->pub_func->get_recent_trades(&(self->kr_api), asset_pairs);
+
+	Py_RETURN_NONE ;
+}
+
+static PyObject *kr_public_get_recent_spread_data(kr_module *self, PyObject *args){
+
+	char* asset_pairs = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &asset_pairs))
+		return NULL;
+
+	self->kr_api->pub_func->get_recent_spread_data(&(self->kr_api), asset_pairs);
+
+	Py_RETURN_NONE ;
+}
+
+static PyMethodDef kr_module_methods[] = {
+	{"set_opt", (PyCFunction)kr_module_set_opt, METH_VARARGS, "Set optionals for the API calls"},
 	{"add_order", (PyCFunction)kr_private_add_order, METH_VARARGS, "Execute an order"},
 	{"cancel_order", (PyCFunction)kr_private_cancel_order, METH_VARARGS, "Cancel an order (by order-ID)"},
 	{"account_balance", (PyCFunction)kr_private_account_balance, METH_NOARGS, "Query the account balance"},
 	{"trade_balance", (PyCFunction)kr_private_trade_balance, METH_NOARGS, "Query the trade balance"},
-	{"result", (PyCFunction)kr_private_result, METH_VARARGS, "Return the result of an API call"},
+	{"result", (PyCFunction)kr_module_result, METH_VARARGS, "Return the result of an API call"},
 	{"open_orders", (PyCFunction)kr_private_open_orders, METH_VARARGS, "Get a list of open orders"},
 	{"closed_orders", (PyCFunction)kr_private_closed_orders, METH_VARARGS, "Get a list of closed orders"},
 	{"query_order_info", (PyCFunction)kr_private_query_order_info, METH_VARARGS, "Query order information"},
@@ -306,18 +337,21 @@ static PyMethodDef kr_private_methods[] = {
 	{"get_tradeable_asset_pairs", (PyCFunction)kr_public_get_tradeable_asset_pairs, METH_VARARGS, "Get tradeable asset pairs"},
 	{"get_ticker_info", (PyCFunction)kr_public_get_ticker_info, METH_VARARGS, "Get ticker information"},
 	{"get_ohlc_data", (PyCFunction)kr_public_get_ohlc_data, METH_VARARGS, "Get OHLC data"},
+	{"get_order_book", (PyCFunction)kr_public_get_order_book, METH_VARARGS, "Get order book"},
+	{"get_recent_trades", (PyCFunction)kr_public_get_recent_trades, METH_VARARGS, "Get recent trades"},
+	{"get_recent_spread_data", (PyCFunction)kr_public_get_recent_spread_data, METH_VARARGS, "Get recent spread data"},
 	{NULL}	/* Sentinel */
 };
 
 
 
-static PyTypeObject kr_private_Type = {
+static PyTypeObject kr_module_Type = {
 
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"kr_private.Kr_private",   /* tp_name */
-	sizeof(kr_private),	   /* tp_basicsize */
+	"kr_module.kr_module",   /* tp_name */
+	sizeof(kr_module),	   /* tp_basicsize */
 	0,                         /* tp_itemsize */
-	(destructor)kr_private_dealloc,   /* tp_dealloc */
+	(destructor)kr_module_dealloc,   /* tp_dealloc */
 	0,                         /* tp_print */
 	0,                         /* tp_getattr */
 	0,                         /* tp_setattr */
@@ -334,48 +368,48 @@ static PyTypeObject kr_private_Type = {
 	0,                         /* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /* tp_flags */
 	"private objects",           /* tp_doc */
-	(traverseproc)kr_private_traverse,
+	(traverseproc)kr_module_traverse,
 	0,
 	0,
 	0,
 	0,
 	0,
-	kr_private_methods,
-	kr_private_members,
-	kr_private_getseters,
+	kr_module_methods,
+	kr_module_members,
+	kr_module_getseters,
 	0,
 	0,
 	0,
 	0,
 	0,
-	(initproc)kr_private_init,
+	(initproc)kr_module_init,
 	0,
-	kr_private_new,
+	kr_module_new,
 };
 
-static PyModuleDef kr_privatemodule = {
+static PyModuleDef kr_module_mod = {
 	PyModuleDef_HEAD_INIT,
-	"kr_private",
+	"kr_module",
 	"Module that inherits private API functions.",
 	-1,
 	NULL, NULL, NULL, NULL, NULL
 };
 
-PyMODINIT_FUNC PyInit_kr_private(void){
+PyMODINIT_FUNC PyInit_kr_module(void){
 
-	printf("PyInit_kr_private called\n");
+	printf("PyInit_kr_module called\n");
 
 	PyObject* m;
 
-	if (PyType_Ready(&kr_private_Type) < 0)
+	if (PyType_Ready(&kr_module_Type) < 0)
 		return NULL;
 
-	m = PyModule_Create(&kr_privatemodule);
+	m = PyModule_Create(&kr_module_mod);
 	if (m == NULL)
 		return NULL;
 
-	Py_INCREF(&kr_private_Type);
-	PyModule_AddObject(m, "kr_private", (PyObject *)&kr_private_Type);
+	Py_INCREF(&kr_module_Type);
+	PyModule_AddObject(m, "kr_module", (PyObject *)&kr_module_Type);
 
 	return m;
 }
