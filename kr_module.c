@@ -115,7 +115,7 @@ static PyObject *kr_private_add_order(kr_module *self, PyObject *args){
 	
 	printf("calling add_order from python\n");
 
-	self->kr_api->priv_func->add_order(&(self->kr_api), "buy", "stop-loss-profit", "XXBTZEUR", "0.43", "0.2", "0.1");
+	self->kr_api->priv_func->add_order(&(self->kr_api), type, ordertype, asset, volume, arg_1, arg_2);
 	printf("add_order called\n");
 	Py_RETURN_NONE ;
 }
