@@ -238,7 +238,12 @@ static PyObject *kr_public_server_time(kr_module *self){
 
 static PyObject *kr_module_result(kr_module *self){
 
-	return PyUnicode_FromString(self->kr_api->s_result);
+	char* result = NULL;
+
+	if((result = self->kr_api->s_result))
+		return PyUnicode_FromString(result);
+	else
+		Py_RETURN_NONE;
 }
 
 static PyObject *kr_public_asset_info(kr_module *self){
