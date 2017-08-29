@@ -25,7 +25,7 @@ module = PyImport_ImportModule("testPython");
 
 static void kr_module_dealloc(kr_module* self){
 
-	printf("dealloc called\n");
+	/* printf("dealloc called\n"); */
 	if(self->kr_api)
 		kraken_clean(&(self->kr_api));
 
@@ -33,7 +33,7 @@ static void kr_module_dealloc(kr_module* self){
 }
 static PyObject *kr_module_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
 	/* use this function to initialize variabled */
-	printf("Kraken new executed\n");
+	 printf("Kraken new executed\n");
 	kr_module *self;
 	self = (kr_module *)type->tp_alloc(type, 0);
 
@@ -47,7 +47,7 @@ static int kr_module_init(kr_module *self, PyObject *args, PyObject *kwds){
 	printf("private init executed\n");
 
 	const char *api_key = NULL;
-        const char *sec_key = NULL;
+    const char *sec_key = NULL;
 	self->kr_api = NULL;
 
 	if(!PyArg_ParseTuple(args, "ss", &api_key, &sec_key)){
@@ -59,13 +59,13 @@ static int kr_module_init(kr_module *self, PyObject *args, PyObject *kwds){
 	printf("api-key: %s\n", api_key);
 	printf("sec-key: %s\n", sec_key);
 
-	printf("calling kraken_init\n");
+	/* printf("calling kraken_init\n"); */
 	
 	kraken_init(&(self->kr_api), api_key, sec_key);
 
-	printf("key in kraken struct: %s\n", self->kr_api->s_api_key);
+	/* printf("key in kraken struct: %s\n", self->kr_api->s_api_key); */
 
-	printf("kraken_init called\n");
+	/* printf("kraken_init called\n"); */
 	
 	return 0;
 }
@@ -113,10 +113,10 @@ static PyObject *kr_private_add_order(kr_module *self, PyObject *args){
 	if (!PyArg_ParseTuple(args, "ssss|ss", &type, &ordertype, &asset, &volume, &arg_1, &arg_2))
 		return NULL;
 	
-	printf("calling add_order from python\n");
+	/* printf("calling add_order from python\n"); */
 
 	self->kr_api->priv_func->add_order(&(self->kr_api), type, ordertype, asset, volume, arg_1, arg_2);
-	printf("add_order called\n");
+	/* printf("add_order called\n"); */
 	Py_RETURN_NONE ;
 }
 
@@ -321,6 +321,49 @@ static PyObject *kr_public_get_recent_spread_data(kr_module *self, PyObject *arg
 	Py_RETURN_NONE ;
 }
 
+static PyObject *Kraken_reduce(kr_module* self){
+	
+	PyObject *getattr;
+	PyObject *builtins;
+	PyObject *tuple;
+	PyObject *class;
+	PyObject *tmp;
+	PyObject *obj;
+	PyObject *attr;
+	int x;
+
+	printf("Py_TYPE:\n");
+	tmp = (PyObject*)self;
+	/* obj = PyObject_GetItem(self, self->tp_name); */
+	PyObject_Print(tmp, stdout, 0);
+	printf("Py_TYPE END\n");
+
+
+	_Py_IDENTIFIER(getattr);
+	builtins = PyEval_GetBuiltins();
+	getattr = _PyDict_GetItemId(builtins, &PyId_getattr);
+	class = PyObject_GetAttrString(getattr, "__module__");
+
+	PyObject_Print(class, stdout, 0);
+	x = PyCallable_Check(getattr);
+	printf("callable check gettattr result: %d\n\n", x);
+	x = PyCallable_Check(tmp);
+	printf("callable check obj result: %d\n\n", x);
+
+	x = PyObject_HasAttrString(tmp, "__class__");
+	printf("hasAttr check obj result: %d\n\n", x);
+
+	attr = PyObject_GetAttrString(tmp, "__class__");
+	x = PyCallable_Check(attr);
+	printf("callable check attr result: %d\n\n", x);
+
+
+	printf("reduce called !!!\n");
+
+	tuple = Py_BuildValue("O(ss)", attr, self->kr_api->s_api_key, self->kr_api->s_sec_key);
+	return tuple;
+}
+
 static PyMethodDef kr_module_methods[] = {
 	{"set_opt", (PyCFunction)kr_module_set_opt, METH_VARARGS, "Set optionals for the API calls"},
 	{"add_order", (PyCFunction)kr_private_add_order, METH_VARARGS, "Execute an order"},
@@ -345,6 +388,7 @@ static PyMethodDef kr_module_methods[] = {
 	{"get_order_book", (PyCFunction)kr_public_get_order_book, METH_VARARGS, "Get order book"},
 	{"get_recent_trades", (PyCFunction)kr_public_get_recent_trades, METH_VARARGS, "Get recent trades"},
 	{"get_recent_spread_data", (PyCFunction)kr_public_get_recent_spread_data, METH_VARARGS, "Get recent spread data"},
+	{"__reduce__", (PyCFunction)Kraken_reduce, METH_VARARGS, "Necessary for pickling objects"},
 	{NULL}	/* Sentinel */
 };
 
@@ -402,7 +446,7 @@ static PyModuleDef kr_module_mod = {
 
 PyMODINIT_FUNC PyInit_kr_module(void){
 
-	printf("PyInit_kr_module called\n");
+	/* printf("PyInit_kr_module called\n"); */
 
 	PyObject* m;
 
