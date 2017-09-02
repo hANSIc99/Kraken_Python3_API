@@ -323,44 +323,16 @@ static PyObject *kr_public_get_recent_spread_data(kr_module *self, PyObject *arg
 
 static PyObject *Kraken_reduce(kr_module* self){
 	
-	PyObject *getattr;
-	PyObject *builtins;
 	PyObject *tuple;
-	PyObject *class;
-	PyObject *tmp;
 	PyObject *obj;
 	PyObject *attr;
-	int x;
 
-	printf("Py_TYPE:\n");
-	tmp = (PyObject*)self;
-	/* obj = PyObject_GetItem(self, self->tp_name); */
-	PyObject_Print(tmp, stdout, 0);
-	printf("Py_TYPE END\n");
+	obj = (PyObject*)self;
 
-
-	_Py_IDENTIFIER(getattr);
-	builtins = PyEval_GetBuiltins();
-	getattr = _PyDict_GetItemId(builtins, &PyId_getattr);
-	class = PyObject_GetAttrString(getattr, "__module__");
-
-	PyObject_Print(class, stdout, 0);
-	x = PyCallable_Check(getattr);
-	printf("callable check gettattr result: %d\n\n", x);
-	x = PyCallable_Check(tmp);
-	printf("callable check obj result: %d\n\n", x);
-
-	x = PyObject_HasAttrString(tmp, "__class__");
-	printf("hasAttr check obj result: %d\n\n", x);
-
-	attr = PyObject_GetAttrString(tmp, "__class__");
-	x = PyCallable_Check(attr);
-	printf("callable check attr result: %d\n\n", x);
-
-
-	printf("reduce called !!!\n");
+	attr = PyObject_GetAttrString(obj, "__class__");
 
 	tuple = Py_BuildValue("O(ss)", attr, self->kr_api->s_api_key, self->kr_api->s_sec_key);
+
 	return tuple;
 }
 
